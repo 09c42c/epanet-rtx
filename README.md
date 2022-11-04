@@ -25,7 +25,7 @@ Intended Audience
  
 Find Out More
 ------------------ 
-Get more info from the [official documentation](http://OpenWaterAnalytics.github.com/epanet-rtx/) and the [wiki](https://github.com/OpenWaterAnalytics/epanet-rtx/wiki).
+Get more info from the [official documentation](http://wateranalytics.org/epanet-rtx/).
 
 Active Development
 ------------------

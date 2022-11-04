@@ -43,6 +43,9 @@ IF(APPLE)
    SET(EXTRA_LIBS ${SECURITY_FRAMEWORK} ${CORE_FRAMEWORK})
 ENDIF (APPLE)
 
+FIND_PACKAGE (Boost 1.74.0 REQUIRED)
+FIND_PACKAGE (cpprestsdk 2.10.18 REQUIRED)
+
 include(../../deps/conanbuildinfo.cmake)
 conan_basic_setup()
 
@@ -138,14 +141,11 @@ set(rtx_lib_deps
 	iodbc
 	)
 
-
 target_link_libraries(
 	epanetrtx
 	${rtx_lib_deps}
-  ${CONAN_LIBS}
+	${CONAN_LIBS}
 	)
-
-
 
 install(DIRECTORY ../../src/ DESTINATION include/rtx FILES_MATCHING PATTERN "*.h")
 install(TARGETS epanetrtx DESTINATION lib)

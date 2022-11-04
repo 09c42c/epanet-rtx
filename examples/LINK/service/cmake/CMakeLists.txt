@@ -1,9 +1,8 @@
-cmake_minimum_required (VERSION 2.6)
-
+cmake_minimum_required (VERSION 3.10)
 
 project (EPANET-RTX)
 SET (CMAKE_C_FLAGS "-std=c99")
-SET (CMAKE_CXX_FLAGS "-Wall -std=c++14")
+SET (CMAKE_CXX_FLAGS "-Wall -std=c++17")
 SET (CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_definitions(-DRTX_NO_MYSQL)
 
@@ -25,6 +24,9 @@ IF (ZLIB_FOUND)
         MESSAGE( STATUS "CMAKE found zlib")
 ENDIF(ZLIB_FOUND)
 
+include(../../../../deps/conanbuildinfo.cmake)
+conan_basic_setup()
+
 # the rtx library
 include_directories(
   ../../../../src
@@ -36,6 +38,7 @@ include_directories(
   /opt/lib
   /usr/lib/x86_64-linux-gnu/
   ${ZLIB_INCLUDE_DIRS}
+  ${CONAN_INCLUDE_DIRS}
 )
 
 add_library(epanet-rtx STATIC
@@ -102,6 +105,7 @@ target_link_libraries(epanet-rtx
   sqlite3
   m
   cpprest
+  ${CONAN_LIBS}
 )
 
 # the AutoRunner class
