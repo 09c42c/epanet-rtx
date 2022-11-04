@@ -24,6 +24,7 @@ using namespace std;
 
 #define _DB_MAX_CONNECT_TRY 5
 #define SERIES_LIST_TTL 30
+#define FUSE_DURATION 1
 
 /************ request type *******************/
 
@@ -59,6 +60,7 @@ bool DbPointRecord::WideQueryInfo::valid() {
 /************ impl *******************/
 
 DbPointRecord::DbPointRecord() : _last_request("",TimeRange()) {
+  _lastFailedAttempt = std::chrono::time_point<std::chrono::system_clock>();
   _adapter = NULL;
   errorMessage = "Not Connected";
   _readOnly = false;
@@ -76,6 +78,7 @@ DbPointRecord::DbPointRecord() : _last_request("",TimeRange()) {
 
 void DbPointRecord::setConnectionString(const std::string &str) {
   _adapter->setConnectionString(str);
+  _lastFailedAttempt = std::chrono::time_point<std::chrono::system_clock>();
 }
 string DbPointRecord::connectionString() {
   return _adapter->connectionString();
@@ -89,9 +92,19 @@ bool DbPointRecord::isConnected() {
 void DbPointRecord::dbConnect() {
   try {
     if (_adapter != NULL) {
+      if(_badConnection == true){
+        auto thisAttempt = std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed_seconds = thisAttempt-_lastFailedAttempt;
+        if(elapsed_seconds <= std::chrono::minutes(FUSE_DURATION)){
+          return;
+        }
+      }
       _adapter->doConnect();
+      _badConnection = false;
     }
   } catch (exception &e) {
+    _badConnection = true;
+    _lastFailedAttempt = std::chrono::system_clock::now();
     cerr << "could not connect to db: " << _adapter->connectionString() << endl;
     cerr << e.what() << endl;
   }
@@ -522,6 +535,10 @@ std::vector<Point> DbPointRecord::pointsInRange(const string& id, TimeRange qran
   if (_wideQuery.valid() && _wideQuery.range().intersection(qrange) == TimeRange::intersect_other_internal) {
     return DB_PR_SUPER::pointsInRange(id, qrange);
   }
+  else {
+    _wideQuery = WideQueryInfo(); // the intersection did not align, so invalidate this wide query marker. Beyond here we may mutate the cache.
+  }
+  
   
   if (!checkConnected()) {
     return DB_PR_SUPER::pointsInRange(id, qrange);

@@ -33,6 +33,7 @@
 #include <thread>
 #include <mutex>
 #include <shared_mutex>
+#include "openssl/sha.h"
 
 using namespace RTX;
 using namespace std;
@@ -125,6 +126,24 @@ std::string Model::modelFile() {
   return _modelFile;
 }
 
+std::string Model::modelHash() {
+  std::ifstream f(_modelFile);
+  std::stringstream buffer;
+  buffer << f.rdbuf();
+  std::string modelString = buffer.str();
+  
+  unsigned char hash[SHA256_DIGEST_LENGTH];
+  SHA256_CTX sha256;
+  SHA256_Init(&sha256);
+  SHA256_Update(&sha256, modelString.c_str(), modelString.length());
+  SHA256_Final(hash, &sha256);
+  
+  std::stringstream ss;
+  for(int i=0; i<SHA256_DIGEST_LENGTH; ++i)
+      ss << std::hex << (int)hash[i];
+  return ss.str();
+}
+
 bool Model::shouldRunWaterQuality() {
   return _shouldRunWaterQuality;
 }
@@ -172,6 +191,14 @@ void Model::logLine(const std::string& line) {
     const char *msg = myLine.c_str();
     _simLogCallback(msg);
   }
+}
+
+std::string Model::getProjectionString(){
+  return _projectionString;
+}
+
+void Model::setProjectionString(std::string projectionString){
+  _projectionString = projectionString;
 }
 
 
@@ -428,6 +455,7 @@ void Model::initDMAs() {
   for(const Dma::_sp &dma : newDmas) {
     dma->initDemandTimeseries(boundaryPipes);
     dma->demand()->setUnits(this->flowUnits());
+    dma->demand()->setClock(this->_regularMasterClock);
     this->addDma(dma);
   }
   
@@ -437,6 +465,7 @@ void Model::initDMAs() {
     if (dmaNameHashes.count(hash) > 0) {
       const string name = dmaNameHashes.at(hash);
       dma->setName(name);
+      dma->demand()->setName("demand,dma=" + hash);
     }
   }
   
@@ -1162,7 +1191,7 @@ std::ostream& Model::toStream(std::ostream &stream) {
 void Model::setSimulationParameters(time_t time) {
   struct tm * timeinfo = localtime (&time);
   
-  cout << EOL << "*** SETTING MODEL INPUTS ***" << EOL;
+  cout << EOL << "*** SETTING MODEL INPUTS *** " << asctime(timeinfo) << " - " << time << EOL;
   // set all element parameters
   
   // allocate junction demands based on dmas, and set the junction demand values in the model.
@@ -1451,8 +1480,8 @@ void Model::fetchSimulationStates() {
 
 
 void Model::saveNetworkStates(time_t simtime, std::set<PointRecord::_sp> bulkRecords) {
-  
-  cout << "******* saving network states *********" << EOL << flush;
+  struct tm * timeinfo = localtime (&simtime);
+  cout << "******* saving network states *******" << asctime(timeinfo) << " - " << simtime << EOL << flush;
   auto t1 = time(NULL);
 
   for(PointRecord::_sp r: bulkRecords) {

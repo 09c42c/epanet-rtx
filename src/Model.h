@@ -64,7 +64,10 @@ namespace RTX {
 //    virtual void loadModelFromFile(const string& filename) throw(std::exception);
     virtual void useModelFromPath(const std::string& path);
     virtual string modelFile();
+    virtual string modelHash();
     virtual void overrideControls();
+    virtual std::string getProjectionString();
+    virtual void setProjectionString(std::string projectionString);
     
     /// simulation methods
     void runSinglePeriod(time_t time);
@@ -90,6 +93,17 @@ namespace RTX {
     
     bool shouldRunWaterQuality();
     void setShouldRunWaterQuality(bool run);
+    
+    enum QualityType {
+      None = 0,
+      Age = 1,
+      Trace = 2,
+      UNKNOWN = 3
+    };
+    
+    virtual void setQualityOptions(QualityType qt, const std::string& traceNode = "") = 0;
+    virtual QualityType qualityType() = 0;
+    virtual std::string qualityTraceNode() = 0;
     
     // DMAs -- identified by boundary link sets (doesHaveFlowMeasure)
     void initDMAs();
@@ -312,6 +326,7 @@ namespace RTX {
     RTX_Logging_Callback_Block _simLogCallback;
     std::function<void(time_t)> _didSimulateCallback, _willSimulateCallback;
     std::future<void> _saveStateFuture;
+    std::string _projectionString;
     
   };
   

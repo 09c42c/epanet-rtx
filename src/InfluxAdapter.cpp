@@ -15,8 +15,6 @@
 
 #include "InfluxAdapter.h"
 #include "InfluxClient.hpp"
-#include "SendPointsCoroutine.hpp"
-
 
 #include "MetricInfo.h"
 
@@ -29,6 +27,21 @@ using namespace oatpp::web;
 using namespace oatpp::network;
 using namespace nlohmann;
 
+
+std::string __url_encode(const std::string& input);
+std::string __url_encode(const std::string& input) {
+  std::string encoded;
+  CURL *curl = curl_easy_init();
+  if(curl) {
+    char *output = curl_easy_escape(curl, input.c_str(), 0);
+    if(output) {
+      encoded = std::string(output);
+      curl_free(output);
+    }
+    curl_easy_cleanup(curl);
+  }
+  return encoded;
+}
 
 /***************************************************************************************/
 InfluxAdapter::connectionInfo::connectionInfo() {
@@ -317,6 +330,9 @@ std::string InfluxTcpAdapter::Query::selectStr() {
     ss << boost::algorithm::join(this->select,", ");
   }
   ss << " FROM " << this->nameAndWhereClause();
+  if (this->groupBy.length() > 0) {
+    ss << " GROUP BY " << this->groupBy;
+  }
   if (this->order.length() > 0) {
     ss << " ORDER BY " << this->order;
   }
@@ -332,7 +348,7 @@ std::string InfluxTcpAdapter::Query::nameAndWhereClause() {
 }
 
 
-map<string, vector<Point> > __pointsFromJson(json& json);
+
 vector<Point> __pointsSingle(json& json);
 
 
@@ -368,19 +384,26 @@ shared_ptr<oatpp::web::client::RequestExecutor> InfluxTcpAdapter::createExecutor
     connectionProvider = oatpp::openssl::client::ConnectionProvider::createShared(config, {this->conn.host, (v_uint16)this->conn.port});
   }
   
-  /* create connection pool */
-  //auto connectionPool = std::make_shared<ClientConnectionPool>(
-  //       connectionProvider /* connection provider */,
-  //       10 /* max connections */,
-  //       std::chrono::seconds(5) /* max lifetime of idle connection */
-  //);
+  auto monitor = std::make_shared<oatpp::network::monitor::ConnectionMonitor>(connectionProvider);
 
+  /* close all connections that stay opened for more than 120 seconds */
+  monitor->addMetricsChecker(
+    std::make_shared<oatpp::network::monitor::ConnectionMaxAgeChecker>(
+      std::chrono::seconds(20)
+    )
+  );
+//  auto monitor = std::make_shared<oatpp::network::monitor::ConnectionMonitor>(connectionProvider);
+//  monitor->addMetricsChecker(
+//      std::make_shared<oatpp::network::monitor::ConnectionInactivityChecker>(
+//          std::chrono::seconds(20),
+//          std::chrono::seconds(20)
+//        )
+//    );
   /* create retry policy */
-   //auto retryPolicy = std::make_shared<client::SimpleRetryPolicy>(3 /* max retries */, std::chrono::seconds(1) /* retry interval */);
+   auto retryPolicy = std::make_shared<client::SimpleRetryPolicy>(5 /* max retries */, std::chrono::seconds(5) /* retry interval */);
 
   /* create request executor */
-  return client::HttpRequestExecutor::createShared(connectionProvider);
-  //return client::HttpRequestExecutor::createShared(connectionPool, retryPolicy /* retry policy */);
+  return client::HttpRequestExecutor::createShared(connectionProvider, retryPolicy);
 }
 
 const DbAdapter::adapterOptions InfluxTcpAdapter::options() const {
@@ -419,7 +442,7 @@ void InfluxTcpAdapter::doConnect() {
   // see if the database needs to be created
   bool dbExists = false;
   
-  string q("SHOW MEASUREMENTS LIMIT 1");
+  string q("SHOW SERIES LIMIT 1");
   auto response = _restClient->doQuery(this->conn.getAuthString(), this->conn.db, encodeQuery(q));
   json jsoMeas = jsonFromResponse(response);
   if (!jsoMeas.contains(kRESULTS)) {
@@ -428,7 +451,8 @@ void InfluxTcpAdapter::doConnect() {
       return;
     }
     else {
-      //_errCallback("Connect failed: No Database?");
+      _errCallback("Connect failed: No Database?");
+      throw(std::invalid_argument("Bad database connection."));
       return;
     }
   }
@@ -450,7 +474,7 @@ void InfluxTcpAdapter::doConnect() {
   
   if (!dbExists) {
     string q("CREATE DATABASE " + this->conn.db);
-    auto response = _restClient->doCreate(encodeQuery(q));
+    auto response = _restClient->doCreate(this->conn.getAuthString(), encodeQuery(q));
     json js = jsonFromResponse(response);
     if (js.size() == 0 || !js.contains(kRESULTS) ) {
       _errCallback("Can't create database");
@@ -561,20 +585,20 @@ std::map<std::string, std::vector<Point> > InfluxTcpAdapter::wideQuery(TimeRange
   stringstream ss;
   ss << "SELECT ";
   ss << boost::algorithm::join(fields,", ");
-  ss << " FROM /.+/";
+  ss << " FROM /.*/";
   ss << " WHERE " << boost::algorithm::join(where," AND ");
   ss << " GROUP BY * ORDER BY ASC";
   
   // for many wide query optimization needs, we may also want the last known point prior to the range provided
   // such as pump status or other report-by-exception values.
-  string prevQuery = "SELECT time, value, quality, confidence FROM /.+/ WHERE time < " + to_string(range.start) + "s GROUP BY * order by time desc limit 1";
-  string nextQuery = "SELECT time, value, quality, confidence FROM /.+/ WHERE time > " + to_string(range.end) + "s GROUP BY * order by time asc limit 1";
+  string prevQuery = "SELECT time, value, quality, confidence FROM /.*/ WHERE time < " + to_string(range.start) + "s GROUP BY * order by time desc limit 1";
+  string nextQuery = "SELECT time, value, quality, confidence FROM /.*/ WHERE time > " + to_string(range.end) + "s GROUP BY * order by time asc limit 1";
   
   auto qstr = prevQuery + ";" + ss.str() + ";" + nextQuery;
   auto response = _restClient->doQueryWithTimePrecision(this->conn.getAuthString(), this->conn.db, encodeQuery(qstr), "s");
   json jsv = jsonFromResponse(response);
   
-  auto fetch = __pointsFromJson(jsv);
+  map<string, vector<Point> > fetch = __pointsFromJson(jsv);
   return fetch;
 }
 
@@ -756,30 +780,47 @@ size_t InfluxTcpAdapter::maxTransactionLines() {
 void InfluxTcpAdapter::sendPointsWithString(const std::string& content) {
   //INFLUX_ASYNC_SEND.wait(); // wait on previous send if needed.
   
-  const string bodyContent(content);
+  if(sendPointsFuture.valid()){
+    sendPointsFuture.wait();
+    sendPointsFuture.get();
+  }
 
-  namespace bio = boost::iostreams;
-  std::stringstream compressed;
-  std::stringstream origin(bodyContent);
-  bio::filtering_streambuf<bio::input> out;
-  out.push(bio::gzip_compressor(bio::gzip_params(bio::gzip::default_compression)));
-  out.push(origin);
-  bio::copy(out, compressed);
-  const string zippedContent(compressed.str());
+  sendPointsFuture = std::async(std::launch::async, [&, content]{
+    const string bodyContent(content);
+
+    namespace bio = boost::iostreams;
+    std::stringstream compressed;
+    std::stringstream origin(bodyContent);
+    bio::filtering_streambuf<bio::input> out;
+    out.push(bio::gzip_compressor(bio::gzip_params(bio::gzip::default_compression)));
+    out.push(origin);
+    bio::copy(out, compressed);
+    const string zippedContent(compressed.str());
+    
+    auto response = _restClient->sendPoints(this->conn.getAuthString(), "gzip", this->conn.db, "s", zippedContent);
+    int code = response->getStatusCode();
+    oatpp::String desc = response->getStatusDescription();
+    
+    switch(code) {
+      case 204:
+      case 200:
+        break;
+      default:
+        cout << "INFLUX TCP ADAPTER: Send points to influx: POST returned " << code << " - " << desc->c_str() << EOL << flush;
+    }
+
+  });
   
-  oatpp::async::Executor executor;
-
-  executor.execute<SendPointsCoroutine>(_restClient, this->conn.getAuthString(), "gzip", this->conn.db, "s", zippedContent);
-
-  executor.waitTasksFinished();
-  executor.stop();
-  executor.join();
+  if(!_inTransaction){
+    sendPointsFuture.wait();
+    sendPointsFuture.get();
+  }
 
 }
 
 string InfluxTcpAdapter::encodeQuery(string queryString){
-  string query(curl_escape(queryString.c_str(), 0));
-  return query;
+  std::string q = __url_encode(queryString);
+  return q;
 }
 
 json InfluxTcpAdapter::jsonFromResponse(const std::shared_ptr<Response> response) {
@@ -788,21 +829,31 @@ json InfluxTcpAdapter::jsonFromResponse(const std::shared_ptr<Response> response
   auto errCallback = _errCallback;
   auto connection = this->conn;
   
+  if (response == nullptr) {
+    return js;
+  }
+  
   int code = response->getStatusCode();
-  if(code == 200){
+  if (code == 200) {
     // OATPP_LOGI(TAG, "Connected");
     std::string bodyStr = response->readBodyToString().getValue("");
     // OATPP_LOGD(TAG, "%s", bodyStr.c_str());
-    js = json::parse(bodyStr);
-    return js;
-  }else{
-    OATPP_LOGE(TAG, "Connection Error: %s", response->getStatusDescription()->c_str());
+    if (!json::accept(bodyStr)){
+      OATPP_LOGE(TAG, "JSON Parse Error: %s", bodyStr.c_str());
+      return js;
+    } else {
+      js = json::parse(bodyStr);
+      return js;
+    }
+  }
+  else {
+    OATPP_LOGE(TAG, "Connection Error: %s - %s", response->getStatusDescription()->c_str(), response->readBodyToString().getValue("(no body content)").c_str());
     return js;
   }
 }
 
 
-vector<Point> __pointsSingle(json& json) {
+vector<Point> InfluxTcpAdapter::__pointsSingle(json& json) {
   auto multi = __pointsFromJson(json);
   if (multi.size() > 0) {
     return multi.begin()->second;
@@ -813,7 +864,7 @@ vector<Point> __pointsSingle(json& json) {
 }
 
 
-map<string, vector<Point> > __pointsFromJson(json& json) {
+map<string, vector<Point> > InfluxTcpAdapter::__pointsFromJson(json& json) {
   
   map<string, vector<Point> > out;
   
@@ -837,20 +888,39 @@ map<string, vector<Point> > __pointsFromJson(json& json) {
     for (const auto &series : seriesArray) {
       // assemble the proper identifier for this series
       MetricInfo metric("");
+      if (series.count("name") == 0) {
+        OATPP_LOGE(InfluxTcpAdapter::TAG, "Influx returned malformed response. No \"name\" property in series.");
+        OATPP_LOGI(InfluxTcpAdapter::TAG, "Series format returned: %s", series.dump().c_str());
+      }
       metric.measurement = series.at("name");
       if (series.contains("tags")) {
         auto tagsObj = series.at("tags");
         json::iterator tagsIter = tagsObj.begin();
         while (tagsIter != tagsObj.end()) {
-          metric.tags[tagsIter.key()] = tagsIter.value();
+          auto key = tagsIter.key();
+          string value = tagsIter.value();
+          if (value != "") {
+            metric.tags[key] = value;
+          }
           ++tagsIter;
         }
-        Units units = Units::unitOfType(metric.tags.at("units"));
+        Units units = RTX_DIMENSIONLESS;
+        if (metric.tags.count("units") == 0) {
+          OATPP_LOGE(InfluxTcpAdapter::TAG, "Influx returned malformed response. No \"units\" property in tag list.");
+          OATPP_LOGI(InfluxTcpAdapter::TAG, "Tags object format returned: %s", tagsObj.dump().c_str());
+        }
+        else {
+          units = Units::unitOfType(metric.tags.at("units"));
+        }
         metric.tags.erase("units"); // get rid of units if they are included.
       }
       string properId = metric.name();
       
       map<string,int> columnMap;
+      if (series.count("columns") == 0) {
+        OATPP_LOGE(InfluxTcpAdapter::TAG, "Influx returned malformed response. No \"columns\" property in series.");
+        OATPP_LOGI(InfluxTcpAdapter::TAG, "Series format returned: %s", series.dump().c_str());
+      }
       auto cols = series.at("columns");
       for (int i = 0; i < cols.size(); ++i) {
         string colName = cols[i];
@@ -875,6 +945,10 @@ map<string, vector<Point> > __pointsFromJson(json& json) {
       qualityIndex = columnMap["quality"],
       confidenceIndex = columnMap["confidence"];
       
+      if (series.count("values") == 0) {
+        OATPP_LOGE(InfluxTcpAdapter::TAG, "Influx returned malformed response. No \"values\" property in series.");
+        OATPP_LOGI(InfluxTcpAdapter::TAG, "Series format returned: %s", series.dump().c_str());
+      }
       const auto &values = series.at("values");
       
       auto nValues = values.size();
@@ -895,6 +969,11 @@ map<string, vector<Point> > __pointsFromJson(json& json) {
       
       for (const auto &rowV : values) {
         const auto &row = rowV;
+        // ensure that these values are non-null and castable
+        if (row.at(timeIndex).is_null() || row.at(valueIndex).is_null() || !row.at(timeIndex).is_number() || !row.at(valueIndex).is_number()) {
+          OATPP_LOGW(InfluxTcpAdapter::TAG, "Influx returned malformed row: %s", row.dump().c_str());
+          continue;
+        }
         time_t t = row.at(timeIndex);
         double v = row.at(valueIndex);
         Point::PointQuality q = Point::opc_rtx_override;

@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <future>
+#include <thread>
 
 #include "oatpp/web/client/HttpRequestExecutor.hpp"
 #include "oatpp/network/tcp/client/ConnectionProvider.hpp"
@@ -14,7 +15,10 @@
 #include "oatpp/network/virtual_/client/ConnectionProvider.hpp"
 #include "oatpp/network/virtual_/server/ConnectionProvider.hpp"
 #include "oatpp/network/virtual_/Interface.hpp"
-#include "SendPointsCoroutine.hpp"
+#include "oatpp/network/monitor/ConnectionMonitor.hpp"
+#include "oatpp/network/monitor/ConnectionInactivityChecker.hpp"
+#include "oatpp/network/monitor/ConnectionMaxAgeChecker.hpp"
+#include "oatpp/network/ConnectionPool.hpp"
 
 #include "nlohmann/json.hpp"
 
@@ -115,7 +119,7 @@ namespace RTX {
     class Query {
     public:
       std::vector<std::string> select,where;
-      std::string from,order;
+      std::string from,order,groupBy;
       std::string selectStr();
       std::string nameAndWhereClause();
     };
@@ -125,12 +129,15 @@ namespace RTX {
     std::shared_ptr<oatpp::data::mapping::ObjectMapper> _objectMapper;
     std::shared_ptr<InfluxClient> _restClient;
     std::shared_ptr<oatpp::web::client::RequestExecutor> createExecutor();
+    std::future<void> sendPointsFuture;
 
     Query queryPartsFromMetricId(const std::string& name);
     
     std::string encodeQuery(std::string queryString);
     nlohmann::json jsonFromResponse(const std::shared_ptr<Response> response);
     
+    static std::map<std::string, std::vector<Point> > __pointsFromJson(nlohmann::json& json);
+    static std::vector<Point> __pointsSingle(nlohmann::json& json);
   };
   
   
