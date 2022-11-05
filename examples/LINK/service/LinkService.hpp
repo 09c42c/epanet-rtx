@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #include <boost/thread/thread_only.hpp>
+#include <boost/signals2.hpp>
 
 #include <cpprest/json.h>
 #include <cpprest/http_listener.h>

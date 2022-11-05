@@ -34,6 +34,7 @@ include_directories(
   /usr/local/include/iODBC
   /usr/include/iodbc
   /usr/include/python2.7
+  /usr/include/boost
   /usr/include
   /opt/lib
   /usr/lib/x86_64-linux-gnu/
