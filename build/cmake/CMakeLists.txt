@@ -45,6 +45,11 @@ ENDIF (APPLE)
 
 FIND_PACKAGE (Boost 1.74.0 REQUIRED)
 FIND_PACKAGE (cpprestsdk 2.10.18 REQUIRED)
+FIND_PACKAGE (epanet2 REQUIRED)
+FIND_PACKAGE (nlohmann_json 3.9 REQUIRED)
+FIND_PACKAGE (oatpp 1.3 REQUIRED)
+FIND_PACKAGE (oatpp-openssl REQUIRED)
+FIND_PACKAGE (curl REQUIRED)
 
 include(../../deps/conanbuildinfo.cmake)
 conan_basic_setup()
