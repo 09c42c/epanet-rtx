@@ -30,7 +30,7 @@ conan_basic_setup()
 
 # the rtx library
 include_directories(
-  ../../../../src
+  ../../../src
   /usr/local/include
   /usr/local/include/iODBC
   /usr/include/iodbc
@@ -44,51 +44,51 @@ include_directories(
 )
 
 add_library(epanet-rtx STATIC
-  ../../../../src/AggregatorTimeSeries.cpp
-  ../../../../src/BaseStatsTimeSeries.cpp
-  ../../../../src/BufferPointRecord.cpp
-  ../../../../src/Clock.cpp
-  ../../../../src/ConstantTimeSeries.cpp
-  ../../../../src/CorrelatorTimeSeries.cpp
-  ../../../../src/ConcreteDbRecords.cpp
-  ../../../../src/Curve.cpp
-  ../../../../src/CurveFunction.cpp
-  ../../../../src/DbPointRecord.cpp
-  ../../../../src/InfluxAdapter.cpp
-  ../../../../src/PiAdapter.cpp
-  ../../../../src/SqliteAdapter.cpp
-  ../../../../src/OdbcAdapter.cpp
-  ../../../../src/FailoverTimeSeries.cpp
-  ../../../../src/FirstDerivative.cpp
-  ../../../../src/GainTimeSeries.cpp
-  ../../../../src/IdentifierUnitsList.cpp
-  ../../../../src/IntegratorTimeSeries.cpp
-  ../../../../src/InversionTimeSeries.cpp
-  ../../../../src/LagTimeSeries.cpp
-  ../../../../src/LogicTimeSeries.cpp
-  ../../../../src/MathOpsTimeSeries.cpp
-  ../../../../src/MetaTimeSeries.cpp
-  ../../../../src/MovingAverage.cpp
-  ../../../../src/MultiplierTimeSeries.cpp
-  ../../../../src/OffsetTimeSeries.cpp
-  ../../../../src/OutlierExclusionTimeSeries.cpp
-  ../../../../src/Point.cpp
-  ../../../../src/PointCollection.cpp
-  ../../../../src/PointRecord.cpp
-  ../../../../src/PointRecordTime.cpp
-  ../../../../src/SineTimeSeries.cpp
-  ../../../../src/SquareWaveTimeSeries.cpp
-  ../../../../src/StatsTimeSeries.cpp
-  ../../../../src/ThresholdTimeSeries.cpp
-  ../../../../src/TimeRange.cpp
-  ../../../../src/TimeSeries.cpp
-  ../../../../src/TimeSeriesFilter.cpp
-  ../../../../src/TimeSeriesFilterSecondary.cpp
-  ../../../../src/TimeSeriesFilterSinglePoint.cpp
-  ../../../../src/TimeSeriesSynthetic.cpp
-  ../../../../src/Units.cpp
-  ../../../../src/ValidRangeTimeSeries.cpp
-  ../../../../src/MetricInfo.cpp
+  ../../../src/AggregatorTimeSeries.cpp
+  ../../../src/BaseStatsTimeSeries.cpp
+  ../../../src/BufferPointRecord.cpp
+  ../../../src/Clock.cpp
+  ../../../src/ConstantTimeSeries.cpp
+  ../../../src/CorrelatorTimeSeries.cpp
+  ../../../src/ConcreteDbRecords.cpp
+  ../../../src/Curve.cpp
+  ../../../src/CurveFunction.cpp
+  ../../../src/DbPointRecord.cpp
+  ../../../src/InfluxAdapter.cpp
+  ../../../src/PiAdapter.cpp
+  ../../../src/SqliteAdapter.cpp
+  ../../../src/OdbcAdapter.cpp
+  ../../../src/FailoverTimeSeries.cpp
+  ../../../src/FirstDerivative.cpp
+  ../../../src/GainTimeSeries.cpp
+  ../../../src/IdentifierUnitsList.cpp
+  ../../../src/IntegratorTimeSeries.cpp
+  ../../../src/InversionTimeSeries.cpp
+  ../../../src/LagTimeSeries.cpp
+  ../../../src/LogicTimeSeries.cpp
+  ../../../src/MathOpsTimeSeries.cpp
+  ../../../src/MetaTimeSeries.cpp
+  ../../../src/MovingAverage.cpp
+  ../../../src/MultiplierTimeSeries.cpp
+  ../../../src/OffsetTimeSeries.cpp
+  ../../../src/OutlierExclusionTimeSeries.cpp
+  ../../../src/Point.cpp
+  ../../../src/PointCollection.cpp
+  ../../../src/PointRecord.cpp
+  ../../../src/PointRecordTime.cpp
+  ../../../src/SineTimeSeries.cpp
+  ../../../src/SquareWaveTimeSeries.cpp
+  ../../../src/StatsTimeSeries.cpp
+  ../../../src/ThresholdTimeSeries.cpp
+  ../../../src/TimeRange.cpp
+  ../../../src/TimeSeries.cpp
+  ../../../src/TimeSeriesFilter.cpp
+  ../../../src/TimeSeriesFilterSecondary.cpp
+  ../../../src/TimeSeriesFilterSinglePoint.cpp
+  ../../../src/TimeSeriesSynthetic.cpp
+  ../../../src/Units.cpp
+  ../../../src/ValidRangeTimeSeries.cpp
+  ../../../src/MetricInfo.cpp
 )
 
 target_compile_definitions(epanet-rtx PRIVATE MAXFLOAT=3.40282347e+38F PI_SSL_VALIDATE=false)
@@ -115,7 +115,7 @@ include_directories(../)
 add_library(auto_runner STATIC ../AutoRunner.cpp)
 
 # the link service executable
-include_directories(../ ../../../../src)
+include_directories(../ ../../../src)
 link_directories(/usr/local/lib)
 
 add_executable(link-server ../LinkService.cpp ../LinkJsonSerialization.cpp ../main.cpp)
