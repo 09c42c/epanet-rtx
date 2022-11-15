@@ -45,25 +45,31 @@ ENDIF (APPLE)
 
 FIND_PACKAGE (Boost 1.74.0 REQUIRED)
 FIND_PACKAGE (cpprestsdk 2.10.18 REQUIRED)
+FIND_PACKAGE (epanet2 REQUIRED)
+FIND_PACKAGE (nlohmann_json 3.9 REQUIRED)
+FIND_PACKAGE (oatpp REQUIRED)
+FIND_PACKAGE (oatpp-openssl REQUIRED)
+FIND_PACKAGE (CURL REQUIRED)
 
+set(CONAN_DISABLE_CHECK_COMPILER True)
 include(../../deps/conanbuildinfo.cmake)
 conan_basic_setup()
 
 # the rtx library
 include_directories(
   ${CONAN_INCLUDE_DIRS}
-	../../src
-	/usr/local/include
-	/usr/local/include/iODBC
-	/usr/include
-	/usr/include/iodbc
-
-	)
+        ../../src
+        /usr/local/include
+        /usr/local/include/epanet2
+        /usr/local/include/iODBC
+        /usr/include
+        /usr/include/iodbc
+        )
 
 link_directories(
-	/usr/lib
-	/usr/local/lib
-	)
+        /usr/lib
+        /usr/local/lib
+        )
 
 add_library(epanetrtx
 ../../src/AggregatorTimeSeries.cpp
@@ -138,14 +144,14 @@ set_target_properties(
 
 target_compile_definitions(epanetrtx PRIVATE MAXFLOAT=3.40282347e+38F)
 set(rtx_lib_deps
-	iodbc
-	)
+        iodbc
+        )
 
 target_link_libraries(
-	epanetrtx
-	${rtx_lib_deps}
-	${CONAN_LIBS}
-	)
+        epanetrtx
+        ${rtx_lib_deps}
+        ${CONAN_LIBS}
+        )
 
 install(DIRECTORY ../../src/ DESTINATION include/rtx FILES_MATCHING PATTERN "*.h")
 install(TARGETS epanetrtx DESTINATION lib)
