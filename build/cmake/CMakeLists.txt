@@ -64,6 +64,8 @@ include_directories(
         /usr/local/include/iODBC
         /usr/include
         /usr/include/iodbc
+        /usr/local/include/oatpp-1.3.0/oatpp
+        /usr/local/include/oatpp-1.3.0/oatpp-openssl
         )
 
 link_directories(
