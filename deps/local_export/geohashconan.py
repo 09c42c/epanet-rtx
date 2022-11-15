@@ -21,7 +21,7 @@ class GeoHashConan(ConanFile):
             del self.options.fPIC
 
     def build(self):
-         command = 'cd libgeohash && clang -fPIC -c geohash.c -o geohash.o'
+         command = 'cd libgeohash && gcc -fPIC -c geohash.c -o geohash.o'
          self.run(command)
          self.run("cd libgeohash && ar -rcs libgeohash.a geohash.o")
 
