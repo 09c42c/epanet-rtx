@@ -60,10 +60,10 @@ include_directories(
   ${CONAN_INCLUDE_DIRS}
         ../../src
         /usr/local/include
+        /usr/local/include/epanet2
         /usr/local/include/iODBC
         /usr/include
         /usr/include/iodbc
-
         )
 
 link_directories(
