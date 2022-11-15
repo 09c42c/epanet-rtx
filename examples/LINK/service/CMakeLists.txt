@@ -24,104 +24,39 @@ IF (ZLIB_FOUND)
         MESSAGE( STATUS "CMAKE found zlib")
 ENDIF(ZLIB_FOUND)
 
+FIND_PACKAGE (epanet-rtx REQUIRED)
+FIND_PACKAGE (oatpp REQUIRED)
+FIND_PACKAGE (oatpp-openssl REQUIRED)
+
 set(CONAN_DISABLE_CHECK_COMPILER True)
 include(../../../deps/conanbuildinfo.cmake)
 conan_basic_setup()
 
-# the rtx library
 include_directories(
-  ../../../src
   /usr/local/include
   /usr/local/include/iODBC
   /usr/include/iodbc
-  /usr/include/python2.7
-  /usr/include/boost
   /usr/include
-  /opt/lib
-  /usr/lib/x86_64-linux-gnu/
-  ${ZLIB_INCLUDE_DIRS}
   ${CONAN_INCLUDE_DIRS}
-  /usr/local/include/oatpp-1.3.0/oatpp
-  /usr/local/include/oatpp-1.3.0/oatpp-openssl
-)
-
-add_library(epanet-rtx STATIC
-  ../../../src/AggregatorTimeSeries.cpp
-  ../../../src/BaseStatsTimeSeries.cpp
-  ../../../src/BufferPointRecord.cpp
-  ../../../src/Clock.cpp
-  ../../../src/ConstantTimeSeries.cpp
-  ../../../src/CorrelatorTimeSeries.cpp
-  ../../../src/ConcreteDbRecords.cpp
-  ../../../src/Curve.cpp
-  ../../../src/CurveFunction.cpp
-  ../../../src/DbPointRecord.cpp
-  ../../../src/InfluxAdapter.cpp
-  ../../../src/PiAdapter.cpp
-  ../../../src/SqliteAdapter.cpp
-  ../../../src/OdbcAdapter.cpp
-  ../../../src/FailoverTimeSeries.cpp
-  ../../../src/FirstDerivative.cpp
-  ../../../src/GainTimeSeries.cpp
-  ../../../src/IdentifierUnitsList.cpp
-  ../../../src/IntegratorTimeSeries.cpp
-  ../../../src/InversionTimeSeries.cpp
-  ../../../src/LagTimeSeries.cpp
-  ../../../src/LogicTimeSeries.cpp
-  ../../../src/MathOpsTimeSeries.cpp
-  ../../../src/MetaTimeSeries.cpp
-  ../../../src/MovingAverage.cpp
-  ../../../src/MultiplierTimeSeries.cpp
-  ../../../src/OffsetTimeSeries.cpp
-  ../../../src/OutlierExclusionTimeSeries.cpp
-  ../../../src/Point.cpp
-  ../../../src/PointCollection.cpp
-  ../../../src/PointRecord.cpp
-  ../../../src/PointRecordTime.cpp
-  ../../../src/SineTimeSeries.cpp
-  ../../../src/SquareWaveTimeSeries.cpp
-  ../../../src/StatsTimeSeries.cpp
-  ../../../src/ThresholdTimeSeries.cpp
-  ../../../src/TimeRange.cpp
-  ../../../src/TimeSeries.cpp
-  ../../../src/TimeSeriesFilter.cpp
-  ../../../src/TimeSeriesFilterSecondary.cpp
-  ../../../src/TimeSeriesFilterSinglePoint.cpp
-  ../../../src/TimeSeriesSynthetic.cpp
-  ../../../src/Units.cpp
-  ../../../src/ValidRangeTimeSeries.cpp
-  ../../../src/MetricInfo.cpp
-)
-
-target_compile_definitions(epanet-rtx PRIVATE MAXFLOAT=3.40282347e+38F PI_SSL_VALIDATE=false)
-target_link_libraries(epanet-rtx
-  z
-  boost_iostreams
-  ${ZLIB_LIBRARIES}
-  curl
-  ssl
-  crypto
-  boost_system
-  boost_filesystem
-  boost_date_time
-  boost_regex
-  iodbc
-  sqlite3
-  m
-  cpprest
-  ${CONAN_LIBS}
+  /usr/local/include/rtx
 )
 
 # the AutoRunner class
 add_library(auto_runner STATIC AutoRunner.cpp)
 
 # the link service executable
-include_directories(../../../src)
-link_directories(/usr/local/lib)
+#include_directories(../../../src)
+link_directories(
+/usr/local/lib
+/usr/local/lib/oatpp-1.3.0
+)
 
 add_executable(link-server LinkService.cpp LinkJsonSerialization.cpp main.cpp)
 
-target_link_libraries(link-server LINK_PUBLIC z auto_runner epanet-rtx  ssl crypto boost_iostreams boost_thread boost_program_options boost_chrono pthread ssl cpprest crypto ${EXTRA_LIBS})
-
+target_link_libraries(link-server
+PUBLIC
+z auto_runner epanet-rtx 
+boost_iostreams boost_thread boost_program_options boost_chrono
+pthread ssl cpprest crypto ${EXTRA_LIBS})
 
 install(TARGETS link-server DESTINATION bin)
