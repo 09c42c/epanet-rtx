@@ -66,14 +66,16 @@ include_directories(
         /usr/include/iodbc
         /usr/local/include/oatpp-1.3.0/oatpp
         /usr/local/include/oatpp-1.3.0/oatpp-openssl
-        )
+        ${Boost_LIBRARIES}
+)
 
 link_directories(
         /usr/lib
         /usr/local/lib
-        )
+        /usr/local/lib/oatpp-1.3.0
+)
 
-add_library(epanetrtx
+add_library(epanet-rtx SHARED
 ../../src/AggregatorTimeSeries.cpp
 ../../src/BaseStatsTimeSeries.cpp
 ../../src/BufferPointRecord.cpp
@@ -140,20 +142,37 @@ add_library(epanetrtx
 )
 
 set_target_properties(
-  epanetrtx PROPERTIES
+  epanet-rtx PROPERTIES
   CXX_STANDARD 17
 )
 
-target_compile_definitions(epanetrtx PRIVATE MAXFLOAT=3.40282347e+38F)
-set(rtx_lib_deps
-        iodbc
-        )
+target_compile_definitions(epanet-rtx PRIVATE MAXFLOAT=3.40282347e+38F)
 
 target_link_libraries(
-        epanetrtx
-        ${rtx_lib_deps}
+        epanet-rtx
+        epanet2
+        curl
+        iodbc
+        sqlite3
+        m
+        z
+        pthread
+        oatpp
+        oatpp-openssl
+        boost_system
+        boost_filesystem
+        boost_date_time
+        boost_regex
         ${CONAN_LIBS}
         )
 
 install(DIRECTORY ../../src/ DESTINATION include/rtx FILES_MATCHING PATTERN "*.h")
-install(TARGETS epanetrtx DESTINATION lib)
+install(TARGETS epanet-rtx 
+EXPORT epanet-rtxTargets
+LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+include(GNUInstallDirs)
+install(EXPORT epanet-rtxTargets
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/epanet-rtx
+  FILE epanet-rtxConfig.cmake
+)
