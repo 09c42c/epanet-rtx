@@ -111,14 +111,13 @@ target_link_libraries(epanet-rtx
 )
 
 # the AutoRunner class
-include_directories(../)
-add_library(auto_runner STATIC ../AutoRunner.cpp)
+add_library(auto_runner STATIC AutoRunner.cpp)
 
 # the link service executable
-include_directories(../ ../../../src)
+include_directories(../../../src)
 link_directories(/usr/local/lib)
 
-add_executable(link-server ../LinkService.cpp ../LinkJsonSerialization.cpp ../main.cpp)
+add_executable(link-server LinkService.cpp LinkJsonSerialization.cpp main.cpp)
 
 target_link_libraries(link-server LINK_PUBLIC z auto_runner epanet-rtx  ssl crypto boost_iostreams boost_thread boost_program_options boost_chrono pthread ssl cpprest crypto ${EXTRA_LIBS})
 
