@@ -41,6 +41,8 @@ include_directories(
   /usr/lib/x86_64-linux-gnu/
   ${ZLIB_INCLUDE_DIRS}
   ${CONAN_INCLUDE_DIRS}
+  /usr/local/include/oatpp-1.3.0/oatpp
+  /usr/local/include/oatpp-1.3.0/oatpp-openssl
 )
 
 add_library(epanet-rtx STATIC
