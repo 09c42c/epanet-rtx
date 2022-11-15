@@ -24,7 +24,8 @@ IF (ZLIB_FOUND)
         MESSAGE( STATUS "CMAKE found zlib")
 ENDIF(ZLIB_FOUND)
 
-include(../../../../deps/conanbuildinfo.cmake)
+set(CONAN_DISABLE_CHECK_COMPILER True)
+include(../../../deps/conanbuildinfo.cmake)
 conan_basic_setup()
 
 # the rtx library
