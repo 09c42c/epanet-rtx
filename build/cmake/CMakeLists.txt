@@ -64,15 +64,11 @@ include_directories(
         /usr/local/include/iODBC
         /usr/include
         /usr/include/iodbc
-        /usr/local/include/oatpp-1.3.0/oatpp
-        /usr/local/include/oatpp-1.3.0/oatpp-openssl
-        ${Boost_LIBRARIES}
 )
 
 link_directories(
         /usr/lib
         /usr/local/lib
-        /usr/local/lib/oatpp-1.3.0
 )
 
 add_library(epanet-rtx SHARED
@@ -163,7 +159,6 @@ target_link_libraries(
         boost_filesystem
         boost_date_time
         boost_regex
-        ${CONAN_LIBS}
         )
 
 install(DIRECTORY ../../src/ DESTINATION include/rtx FILES_MATCHING PATTERN "*.h")

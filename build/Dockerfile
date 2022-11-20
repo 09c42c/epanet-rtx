@@ -5,13 +5,6 @@ RUN apt-get update && \
 	apt-get install -y libsqlite3-dev cmake libiodbc2-dev libcpprest-dev libboost-dev g++ git zlib1g-dev && \
 	apt-get install -y openssl curl nlohmann-json3-dev libcurl4-openssl-dev
 
-RUN apt-get install python3-pip --yes
-RUN pip3 install --upgrade pip && \
-  apt-get update && pip3 install conan
-
-RUN conan profile new default --detect && \
-	conan profile update settings.compiler.cppstd=17 default
-
 WORKDIR /opt/src
 
 RUN git clone https://github.com/09c42c/oatpp.git \
@@ -29,6 +22,19 @@ RUN git clone https://github.com/09c42c/oatpp.git \
 	&& rm -rf oatpp \
 	&& rm -rf oatpp-openssl
 
+RUN git clone https://github.com/simplegeo/libgeohash.git \
+	&& cd libgeohash \
+	&& gcc -fPIC -c geohash.c -o geohash.o \
+	&& ar rcs libgeohash.a geohash.o \
+	&& cp geohash.h /usr/local/include \
+	&& cp libgeohash.a /usr/local/lib \
+	&& cd .. \
+	&& rm -rf libgeohash
+
+RUN git clone https://github.com/SqliteModernCpp/sqlite_modern_cpp.git \
+	&& cp -R sqlite_modern_cpp/hdr/* /usr/local/include \
+	&& rm -rf sqlite_modern_cpp
+
 # ##########################################################################################
 # ####  everything above here should be pretty stable. cache this.
 # ##########################################################################################
@@ -45,12 +51,7 @@ RUN git clone https://github.com/09c42c/EPANET.git \
 RUN git clone https://github.com/09c42c/epanet-rtx.git \
 	&& cd epanet-rtx \
 	&& git checkout dev \
-	&& cd deps \
-	&& conan create local_export/geohashconan.py \
-	&& conan create local_export/sqlite_modern_cpp_conan.py \
-	&& conan install . --build=missing
-
-RUN cd epanet-rtx/build/cmake \
+	&& cd build/cmake \
 	&& mkdir build && cd build \
 	&& cmake -DCMAKE_BUILD_TYPE=Release .. \
 	&& make install -j8 \
@@ -62,3 +63,6 @@ RUN cd examples/LINK/service \
 	&& mkdir build && cd build \
 	&& cmake -DCMAKE_BUILD_TYPE=Release .. \
 	&& make install -j8
+
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+	&& apt-get install -y nodejs
