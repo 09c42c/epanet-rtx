@@ -28,16 +28,11 @@ FIND_PACKAGE (epanet-rtx REQUIRED)
 FIND_PACKAGE (oatpp REQUIRED)
 FIND_PACKAGE (oatpp-openssl REQUIRED)
 
-set(CONAN_DISABLE_CHECK_COMPILER True)
-include(../../../deps/conanbuildinfo.cmake)
-conan_basic_setup()
-
 include_directories(
   /usr/local/include
   /usr/local/include/iODBC
   /usr/include/iodbc
   /usr/include
-  ${CONAN_INCLUDE_DIRS}
   /usr/local/include/rtx
 )
 
@@ -45,10 +40,8 @@ include_directories(
 add_library(auto_runner STATIC AutoRunner.cpp)
 
 # the link service executable
-#include_directories(../../../src)
 link_directories(
 /usr/local/lib
-/usr/local/lib/oatpp-1.3.0
 )
 
 add_executable(link-server LinkService.cpp LinkJsonSerialization.cpp main.cpp)
