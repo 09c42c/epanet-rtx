@@ -1,8 +1,0 @@
-[requires]
-geohash/1.0
-sqlite_modern_cpp/3.2
-
-[options]
-[generators]
-cmake
-xcode

@@ -51,9 +51,9 @@ FIND_PACKAGE (oatpp REQUIRED)
 FIND_PACKAGE (oatpp-openssl REQUIRED)
 FIND_PACKAGE (CURL REQUIRED)
 
-set(CONAN_DISABLE_CHECK_COMPILER True)
-include(../../deps/conanbuildinfo.cmake)
-conan_basic_setup()
+# set(CONAN_DISABLE_CHECK_COMPILER True)
+# include(../../deps/conanbuildinfo.cmake)
+# conan_basic_setup()
 
 # the rtx library
 include_directories(
